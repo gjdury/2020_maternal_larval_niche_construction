@@ -110,10 +110,10 @@ Exclude.death - (see below).
 
 Exclude.all - (see below).
 
-For all columns starting in "Exclude": 
-• "Yes" means the individual was accidentally killed, and therefore the datapoint in the corresponding column for this individal should be excluded.
-• "Maybe" means the individual was accidentally injured, and therefore the datapoint in the corresponding for this individal should probably be excluded, despite the survival to the injury.
-• "No" means the individual was not accidentally injured or killed, therefore should not be excluded from the analysis.
+For all columns starting in "Exclude":<br>
+• "Yes" means the individual was accidentally killed, and therefore the datapoint in the corresponding column for this individal should be excluded.<br>
+• "Maybe" means the individual was accidentally injured, and therefore the datapoint in the corresponding for this individal should probably be excluded, despite the survival to the injury.<br>
+• "No" means the individual was not accidentally injured or killed, therefore should not be excluded from the analysis.<br>
 For example, if an individual was killed as a pupa, the columns for 'Exclude.date.3rd', 'Exclude.Mass.3rd', and 'Exclude.Mass.pupa' would contain "No", and the columns 'Exclude.adult' and 'Exclude.death' would contain "Yes".
 
 Notes - Notes, generally on when the individual reached second larval instar, when it was injured or how it died (if applicable), etc.
