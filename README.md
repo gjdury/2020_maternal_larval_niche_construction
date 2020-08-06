@@ -110,7 +110,7 @@ Exclude.death - (see below).
 
 Exclude.all - (see below).
 
-For all columns starting in "Excldude": 
+For all columns starting in "Exclude": 
 • "Yes" means the individual was accidentally killed, and therefore the datapoint in the corresponding column for this individal should be excluded.
 • "Maybe" means the individual was accidentally injured, and therefore the datapoint in the corresponding for this individal should probably be excluded, despite the survival to the injury.
 • "No" means the individual was not accidentally injured or killed, therefore should not be excluded from the analysis.
