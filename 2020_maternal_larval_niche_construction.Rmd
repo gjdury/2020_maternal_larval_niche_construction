@@ -1,0 +1,447 @@
+---
+title: "Niche Construction, larval and maternal, between populations of *Onthophagus taurus*"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+##Loading the required packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here) #For relative file-paths
+
+#Packages used for statistical analysis
+library(lme4) #For linear mixed-effects models
+library(lmerTest) #To perform statistical tests on the objects created with lme4
+library(dplyr) #To filter data
+library(blmeco) #To do an overdispersion test
+library(alr4) #For the ANOVA function
+library(arm) #To get SE of random effects
+
+#Packages used for figures
+library(visreg)
+library(effects)
+library(ggplot2)
+```
+
+## Importing the data
+```{r cars}
+mydata = read.csv("OnthophagusNCdata.csv", header = T, na.strings=c("","NA"))
+```
+
+#Making sure that the numeric variables and factors are stored as such:
+```{r}
+mydata$Mass.3rd.Ins <- as.numeric(as.character(mydata$Mass.3rd.Ins))
+mydata$Mass.Pupa <- as.numeric(as.character(mydata$Mass.Pupa))
+mydata$Dung.batch <- as.factor(as.character(mydata$Dung.batch))
+mydata$Sample.number <- as.factor(as.character(mydata$Sample.number))
+mydata$Batch <- as.factor(as.character(mydata$Batch))
+```
+
+#Creating a log-pupa mass column
+```{r}
+mydata$logMass.Pupa <- log(mydata$Mass.Pupa*1000)
+mydata$Mass.Pupa <- mydata$Mass.Pupa*1000
+```
+
+#Creating a column of factors to use in making plots
+```{r}
+mydata$factors <- interaction(mydata$NC, mydata$Temp, mydata$Pop) #For plots
+```
+
+#Creating a for binary survival data
+```{r}
+#Making a column with binary Survival data
+mydata$Survival <- ifelse(is.na(mydata$Day.Dead),1,0)
+mydata$Survival <- as.factor(mydata$Survival)
+```
+
+#Optional code to include a suspicious datapoint
+Individual 120 seems to have reached pupation in only 10 days, this is highly suspicious and likely a transcribing error. Therefore that data-point was removed from the analyses. If you wish to include this data-point in the analysis, remove the octothorp ("#") from the beginning of both lines and run this block of code.
+```{r}
+#mydata$Days.to.Pupa[120] <- 10
+#mydata$Date.Pupa[120] <- "2017-07-24"
+```
+
+## Filter or subset data
+Since some individuals were injured, of which some survived and some died, but that data prior to the injury is useful, I subset data for it to contain only uninjured individuals (Survival, Mass3rd, logMassPupa, etc.). The other subsets (SurvivalwMaybe, Mass3rdwMaybe, logMassPupawMaybe, etc.) contain individuals that were injured but survived.
+```{r}
+Survival <- subset(mydata, mydata$Exclude.death == "No")
+SurvivalwMaybe <- subset(mydata, subset = mydata$Exclude.death %in% c("No","Maybe"))
+
+Mass3rd <- subset(mydata, mydata$Exclude.Mass.3rd == "No")
+Mass3rdwMaybe <- subset(mydata, subset = mydata$Exclude.Mass.3rd %in% c("No","Maybe"))
+
+logMassPupa <- subset(mydata, mydata$Exclude.Mass.pupa == "No")
+logMassPupawMaybe <- subset(mydata, subset = mydata$Exclude.Mass.pupa %in% c("No","Maybe"))
+
+DaystoPupa <- subset(mydata, mydata$Exclude.date.3rd=="No")
+DaystoPupawMaybe <- subset(mydata, subset = mydata$Exclude.date.3rd %in% c("No","Maybe"))
+
+GramstoL3 <- subset(mydata, mydata$Exclude.date.3rd == "No")
+GramstoL3 <- subset(GramstoL3, mydata$Exclude.Mass.3rd=="No")
+GramstoL3wMaybe <- subset(mydata, subset = mydata$Exclude.date.3rd %in% c("No","Maybe"))
+GramstoL3wMaybe <- subset(mydata, subset = mydata$Exclude.Mass.3rd %in% c("No","Maybe"))
+
+AdultSize <- subset(mydata, mydata$Exclude.adult == "No")
+AdultSizewMaybe <- subset(mydata, subset = mydata$Exclude.adult %in% c("No","Maybe"))
+```
+
+## Analysis of Mass of third instar
+```{r}
+#Tests whether 'mass of 3rd instar' are normally distributed
+shapiro.test(Mass3rd$Mass.3rd.Ins) 
+
+#Linear mixed models comparing larval mass at day 10 of third instar, this is reported in Table S3
+MTModel1 = lmer(Mass.3rd.Ins*1000 ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + Pop:NC:Temp + (1|Batch), data = Mass3rd)
+summary(MTModel1)
+Anova(MTModel1)
+
+#Linear mixed models comparing larval mass at day 10 of third instar, this is reported in Table S3
+MTModel2 = lmer(Mass.3rd.Ins*1000 ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + (1|Batch), data = Mass3rd)
+summary(MTModel2)
+Anova(MTModel2)
+
+#Linear mixed models comparing larval mass at day 10 of third instar, this is reported in Table 1
+MTModel3 = lmer(Mass.3rd.Ins*1000 ~ Pop + NC + Temp
+              + (1|Batch), data = Mass3rd)
+summary(MTModel3)
+Anova(MTModel3)
+
+
+#The following three models are the same, but include individuals that survived injury
+#These models are not reported in the paper.
+MTModel1wM = lmer(Mass.3rd.Ins*1000 ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + Pop:NC:Temp + (1|Batch), data = Mass3rdwMaybe)
+summary(MTModel1wM)
+Anova(MTModel1wM)
+
+MTModel2wM = lmer(Mass.3rd.Ins*1000 ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + (1|Batch), data = Mass3rdwMaybe)
+summary(MTModel2wM)
+Anova(MTModel2wM)
+
+MTModel3wM = lmer(Mass.3rd.Ins*1000 ~ Pop + NC + Temp
+              + (1|Batch), data = Mass3rdwMaybe)
+summary(MTModel3wM)
+Anova(MTModel3wM)
+```
+
+##Figures of Third instar mass (used to create Figure S1)
+```{r}
+#To visualize the (significant) effect of larval niche construction
+#This was used to create panel B of Figure S1
+Mass3rdNCFig <- visreg(MTModel3, "NC", gg = FALSE, asp=0.005)
+Mass3rdNCFig
+#svg("Mass3rdNCFig.svg")
+#plot(Mass3rdNCFig)
+#dev.off()
+
+#To visualize the (significant) effect of maternal niche construction
+#This was used to create panel A of Figure S1
+Mass3rdTempFig <- visreg(MTModel3, "Temp", gg = FALSE, asp=0.005)
+Mass3rdTempFig
+#svg("Mass3rdTempFig.svg")
+#plot(Mass3rdTempFig)
+#dev.off()
+
+#To visualize the (non-significant) effect of population
+#Because this was non-significant, this figure was not used
+Mass3rdPopFig <- visreg(MTModel3, "Pop", gg = FALSE, asp=0.005)
+Mass3rdPopFig
+```
+
+##Analysis of days to pupa
+```{r}
+#Tests whether the number of days to pupation are normally distributed
+shapiro.test(as.numeric(DaystoPupawMaybe$Days.to.Pupa))
+
+#Quantile-Quantile Plot
+qqnorm(as.numeric(DaystoPupawMaybe$Days.to.Pupa))
+qqline(as.numeric(DaystoPupawMaybe$Days.to.Pupa))
+
+#Generalized linear mixed models for time to pupation (results are reported in Table 2)
+DPModel1 = glmer(as.numeric(Days.to.Pupa) ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp + Pop:NC:Temp + (1|Batch), data = DaystoPupa, family = poisson)
+dispersion_glmer(DPModel1) #to test for overdispersion, should not be above 1.4
+summary(DPModel1)
+Anova(DPModel1)
+
+#Generalized linear mixed models for time to pupation, including injured individuals that survived their injury
+DPModel1wM = glmer(as.numeric(Days.to.Pupa) ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp + Pop:NC:Temp + (1|Batch), data = DaystoPupawMaybe, family = poisson)
+dispersion_glmer(DPModel1wM) #to test for overdispersion, should not be above 1.4
+summary(DPModel1wM)
+Anova(DPModel1wM)
+```
+
+##Figures of days to pupa using the package effects
+```{r}
+#Extracting the data to be plotted from the model
+efTime <- effect("Pop:NC:Temp", DPModel1)
+#summary(efTime)
+
+#Putting that extracted data into a dataframe
+xTime <- as.data.frame(efTime)
+#xTime
+
+#This is the plot for days to pupation, used to create Figure 3
+#(The two commented-out lines can be used to export the svg used as the basis for Figure 3).
+#svg("NCDaysToPupa.svg")
+ggplot(xTime, aes(Temp, fit, color=Pop, shape=NC)) + geom_point() + geom_errorbar(aes(ymin=fit-se, ymax=fit+se), width=0.2) + coord_fixed(ratio=0.15) + theme_bw(base_size=12)
+#dev.off()
+```
+
+## Analysis of log Mass of pupae
+```{r}
+#Test for normality of mass of pupa shows it is not normally distributed
+shapiro.test(logMassPupawMaybe$Mass.Pupa)
+#Test for normality of log(mass of pupa) shows it is normally distributed
+shapiro.test(logMassPupawMaybe$logMass.Pupa)
+
+#Linear mixed model comparing log(pupa mass), this is reported in Table S4
+LPModel1 = lmer(logMass.Pupa ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + Pop:NC:Temp + (1|Batch), data = logMassPupa)
+summary(LPModel1)
+Anova(LPModel1)
+
+#Linear mixed model comparing log(pupa mass), this is reported in Table S4
+LPModel2 = lmer(logMass.Pupa ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + (1|Batch), data = logMassPupa)
+summary(LPModel2)
+Anova(LPModel2)
+
+#Linear mixed model comparing log(pupa mass), this is the model reported in Table 1 for this analysis
+LPModel3 = lmer(logMass.Pupa ~ Pop + NC + Temp
+              + (1|Batch), data = logMassPupa)
+summary(LPModel3)
+Anova(LPModel3)
+
+#The following three models are the same, except that they include individuals that survived injury
+#These models are not reported in the paper.
+LPModel1wM = lmer(logMass.Pupa ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + Pop:NC:Temp + (1|Batch), data = logMassPupawMaybe)
+summary(LPModel1wM)
+Anova(LPModel1wM)
+
+LPModel2wM = lmer(logMass.Pupa ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + (1|Batch), data = logMassPupawMaybe)
+summary(LPModel2wM)
+Anova(LPModel2wM)
+
+LPModel3wM = lmer(logMass.Pupa ~ Pop + NC + Temp
+              + (1|Batch), data = logMassPupawMaybe)
+summary(LPModel3wM)
+Anova(LPModel3wM)
+```
+
+
+##Figure of log(pupa mass)
+```{r}
+#This is the code used to create panel B of figure S2
+#To export a copy of the vector file used to create the figure, run the three lines that are commented out
+MassPupaNCFig <- visreg(LPModel3, "NC", trans=exp, partial=TRUE, gg = FALSE)
+MassPupaNCFig
+#svg("MassPupaNCFig.svg")
+#visreg(LPModel2, "NC", trans=exp, partial=TRUE, gg = FALSE)
+#dev.off()
+
+#This is the code used to create panel A of figure S2
+#To export a copy of the vector file used to create the figure, run the three lines that are commented out
+MassPupaTempFig <- visreg(LPModel3, "Temp", trans=exp, partial=TRUE, gg = FALSE)
+MassPupaTempFig
+#svg("MassPupaTempFig.svg")
+#visreg(LPModel2, "Temp", trans=exp, partial=TRUE, gg = FALSE)
+#dev.off()
+```
+
+
+## Analysis of survival
+```{r}
+#Generalized linear mixed models for survival (results are reported in Table S6)
+SModel1 = glmer(as.factor(Survival) ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp + Pop:NC:Temp + (1|Batch), data = Survival, family = binomial, control=glmerControl(optimizer = "bobyqa"))
+summary(SModel1)
+Anova(SModel1)
+
+#Generalized linear mixed models for survival (results are reported in Table 2)
+SModel2 = glmer(Survival ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp + (1|Batch), data = Survival, family = binomial, control=glmerControl(optimizer = "bobyqa"))
+summary(SModel2)
+Anova(SModel2)
+
+#Generalized linear mixed models for survival, including injured individuals that survived their injury
+#These are not reported in the paper
+SModel1wM = glmer(as.factor(Survival) ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp + Pop:NC:Temp + (1|Batch), data = SurvivalwMaybe, family = binomial, control=glmerControl(optimizer = "bobyqa"))
+summary(SModel1wM)
+Anova(SModel1wM)
+
+SModel2wM = glmer(Survival ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp + (1|Batch), data = SurvivalwMaybe, family = binomial, control=glmerControl(optimizer = "bobyqa"))
+summary(SModel2wM)
+Anova(SModel2wM)
+
+#Code to get a summary of sample size across populations for each treatment
+#Making two-way factors column for summary 
+Survival$twowayfactors <- interaction(Survival$NC, Survival$Temp) #For summary
+SurvivalwMaybe$twowayfactors <- interaction(SurvivalwMaybe$NC, SurvivalwMaybe$Temp) #For summary
+
+#Using dplyr to get a summary
+Survival %>%
+  group_by(twowayfactors, Survival) %>%
+  summarise (n = n())
+
+```
+
+##Figure of survival (with package effects), used to make Figure 2
+```{r}
+#Extracting the effects of maternal and larval niche construction from the generalized linear mixed models for survival 
+effectMortality <- effect("NC:Temp", SModel2)
+#summary(ef)
+#Putting the just-extracted data into a data-frame
+effectMortalityDf <- as.data.frame(effectMortality)
+#Adding a column for mortality (i.e., 1 - survival)
+effectMortalityDf$Mort <- 1 - effectMortalityDf$fit
+effectMortalityDf
+
+#Mortality plot (with standard error error-bar above, but not below), this was used as the basis for Figure 2
+MortTempNCDynamite <- ggplot(effectMortalityDf, aes(NC, Mort, color=Temp, fill=Temp)) + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=Mort, ymax=Mort+se), width=0.4, position=position_dodge(width=0.9)) + theme_bw(base_size=12) + coord_fixed(ratio=1.55)
+MortTempNCDynamite
+
+#Run the code below to export a vector format of the figure used as the basis for Figure 2
+#svg("MortTempNCDynamite.svg")
+#MortTempNCDynamite <- ggplot(x, aes(NC, Mort, color=Temp, fill=Temp)) + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=Mort, ymax=Mort+se), width=0.4, position=position_dodge(width=0.9)) + theme_bw(base_size=12) + coord_fixed(ratio=1.55)
+#MortTempNCDynamite
+#dev.off()
+```
+
+
+
+## Analysis of adult size
+```{r}
+#Test for normality of adult size, shows it is normally distributed
+shapiro.test(AdultSize$Adult.Body.Size)
+
+#Linear mixed model comparing adult size, this is reported in Table S5
+ABSModel1 = lmer(Adult.Body.Size ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + Pop:NC:Temp + (1|Batch), data = AdultSize)
+summary(ABSModel1)
+Anova(ABSModel1)
+
+#Linear mixed model comparing adult size, this is reported in Table S5
+ABSModel2 = lmer(Adult.Body.Size ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+            + (1|Batch), data = AdultSize)
+summary(ABSModel2)
+Anova(ABSModel2)
+
+#Linear mixed model comparing adult size, this is the model reported in Table 1 for this analysis
+ABSModel3 = lmer(Adult.Body.Size ~ Pop + NC + Temp + (1|Batch), data = AdultSize)
+summary(ABSModel3)
+Anova(ABSModel3)
+
+#The following three models are the same, except that they include individuals that survived injury
+#Test for normality of adult size (including individuals that survived injury), shows it is normally distributed
+shapiro.test(AdultSizewMaybe$Adult.Body.Size)
+#These models are not reported in the paper.
+ABSModel1wM = lmer(Adult.Body.Size ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+              + Pop:NC:Temp + (1|Batch), data = AdultSizewMaybe)
+summary(ABSModel1wM)
+Anova(ABSModel1wM)
+
+ABSModel2wM = lmer(Adult.Body.Size ~ Pop + NC + Temp + Pop:NC + Pop:Temp + NC:Temp 
+            + (1|Batch), data = AdultSizewMaybe)
+summary(ABSModel2wM)
+Anova(ABSModel2wM)
+
+ABSModel3wM = lmer(Adult.Body.Size ~ Pop + NC + Temp + (1|Batch), data = AdultSizewMaybe)
+summary(ABSModel3wM)
+Anova(ABSModel3wM)
+```
+
+##Figures of adult size
+```{r}
+#This code was used to generate panel B of Figure 1
+#To export a copy of the vector file used to create the figure, run the three lines that are commented out
+SizeNCFig <- visreg(ABSModel3, "NC", gg = FALSE)
+SizeNCFig
+#svg("AdultSizeNCFig.svg")
+#plot(SizeNCFig)
+#dev.off()
+
+#This code was used to generate panel A of Figure 1
+#To export a copy of the vector file used to create the figure, run the three lines that are commented out
+SizeTempFig <- visreg(ABSModel3, "Temp", gg = FALSE)
+SizeTempFig
+#svg("AdultSizeTempFig.svg")
+#plot(SizeTempFig)
+#dev.off()
+```
+
+
+##Counting number of injured individuals that survived injury
+```{r}
+mydata$Maybe.Mass.3rd <- ifelse(mydata$Exclude.Mass.3rd=="Maybe",1,0)
+mydata$Maybe.Date.3rd <- ifelse(mydata$Exclude.date.3rd=="Maybe",1,0)
+mydata$Maybe.Pupa <- ifelse(mydata$Exclude.Mass.pupa=="Maybe",1,0)
+mydata$Maybe.all <- ifelse(mydata$Exclude.all=="Maybe",1,0)
+mydata$Maybe.adult <- ifelse(mydata$Exclude.adult=="Maybe",1,0)
+mydata$Sum.Maybe <- mydata$Maybe.Mass.3rd+mydata$Maybe.Date.3rd +mydata$Maybe.Pupa+mydata$Maybe.all+mydata$Maybe.adult #+mydata$Sum.Maybe
+mydata$Injured.count <- ifelse(mydata$Sum.Maybe==0,0,1)
+sum(mydata$Injured.count)
+```
+
+##Getting medians, sample sizes and standard errors to populate Table S2
+```{r}
+#Function to get mean, sample size, median and standard error for each metric
+myFun <- function(x) {
+  c(
+    mean = round(mean(x, na.rm = TRUE),2), 
+    median = round(median(x, na.rm = TRUE),2), 
+    se = round(sd(x, na.rm = TRUE)/sqrt(length(which(!is.na(x)))),2),
+    n=round(length(which(!is.na(x))),0)
+    )
+}
+
+print("Mean, sample size, median and standard error for the mass of larvae 10 days into their third instar")
+tapply(Mass3rd$Mass.3rd.Ins*1000, Mass3rd$factors, myFun)
+
+print("Mean, sample size, median and standard error for the log(mass of pupae)")
+tapply(logMassPupa$Mass.Pupa, logMassPupa$factors, myFun)
+
+print("Mean, sample size, median and standard error for the number of days to pupation")
+tapply(DaystoPupa$Days.to.Pupa, DaystoPupa$factors, myFun)
+
+print("Mean, sample size, median and standard error for the adult body size")
+tapply(AdultSize$Adult.Body.Size, AdultSize$factors, myFun)
+
+
+#These are the same numbers but including individuals that survived injury
+print("Mean, sample size, median and standard error for the mass of larvae 10 days into their third instar, including individuals that survived injury")
+tapply(Mass3rdwMaybe$Mass.3rd.Ins*1000, Mass3rdwMaybe$factors, myFun)
+
+print("Mean, sample size, median and standard error for the log(mass of pupae), including individuals that survived injury")
+tapply(logMassPupawMaybe$Mass.Pupa, logMassPupawMaybe$factors, myFun)
+
+print("Mean, sample size, median and standard error for the number of days to pupation, including individuals that survived injury")
+tapply(DaystoPupawMaybe$Days.to.Pupa, DaystoPupawMaybe$factors, myFun)
+
+print("Mean, sample size, median and standard error for the adult body size, including individuals that survived injury")
+tapply(AdultSizewMaybe$Adult.Body.Size, AdultSizewMaybe$factors, myFun)
+```
+##Getting medians, sample sizes and standard errors to populate Table S1
+```{r}
+print("Number of individuals that survived to adulthood (and didn't)")
+table(Survival$Survival, Survival$factors)
+
+print("Percentages of individuals that survived to adulthood (and didn't)")
+100*prop.table( table(Survival$Survival, Survival$factors) , 2)
+
+
+#These are the same computations but including individuals that survived injury
+print("Number of individuals that survived to adulthood (and didn't), including individuals that survived injury")
+table(SurvivalwMaybe$Survival, SurvivalwMaybe$factors)
+
+print("Percentages of individuals that survived to adulthood (and didn't), including individuals that survived injury")
+100*prop.table( table(SurvivalwMaybe$Survival, SurvivalwMaybe$factors) , 2)
+
+print("Total number of samples in each treatment, including individuals that survived injury")
+#Some of these numbers are reported in the sampling intentions
+summary(mydata$factors)
+```
