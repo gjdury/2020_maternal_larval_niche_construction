@@ -59,7 +59,7 @@ All files should be in a single folder.
 *************************************************************
 Each ROW in the data files represents measurements for a single individual Onthophagus taurus dung beetle.
 
-Column headers:
+Column headers:<br>
 Sample.number - a unique number given to each individual at the end of the project.
 
 Plate.number - Each individual was raised in one (or a series) of twelve-well tissue-culture plate; this lists which plate(s) the individual was reared in.
