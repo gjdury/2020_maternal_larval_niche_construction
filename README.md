@@ -1,4 +1,5 @@
 # Readme for 2020_maternal_larval_niche_construction
+<a href="https://doi.org/10.5281/zenodo.3976037"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.3976037.svg" alt="DOI"></a>
 
 This data package accompanies the paper:
 Dury, G. J., Moczek, A. P. and Schwab D. B. (2020), Maternal and larval niche construction interact to shape development, survival, and 
